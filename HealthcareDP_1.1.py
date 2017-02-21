@@ -8,6 +8,7 @@ When running the Program make sure that the input file is in the same directory 
 """
 
 import datetime as dt
+import csv
 import collections
 import math
 import time
@@ -136,9 +137,7 @@ class HealthCareDP():
                 totalValue = enjoyment + future
                 if totalValue > highestReturn[1]:
                     highestReturn = (state, totalValue, round(enjoyment,1))
-                    earned = (state, totalValue, self)
             self.cache[newState] = highestReturn
-            self.StratCache[newState] = earned
         return highestReturn
     
     #Calls the solve function iteratively on the max returned state. This recreates the optimal path through the tree from
@@ -203,13 +202,23 @@ def main():
     HCDP = HealthCareDP(startState,params[1],regenStrat,enjoymentStrat, degenStrat18, harvestStrat18)
           
     start = time.time()
+    
+    output = []
     for val in [startState] + HCDP.FindStrat(startState):
-        print(HCDP.Solve(val))
+        o = HCDP.Solve(val)
+        output.append(o)
+        print o
+        
     end = time.time()
     print(end - start)
     HCDP.AnalyzeStrat(dummyStrat)
+    
     outputfilename = 'output_{}.csv'.format(fileName[:-4])
     with open(outputfilename,'w') as f:
-        for row in HCDP.FindStrat(startState):
-            f.write("%s\n" %str(row))
+        fieldnames = ['Round','Health','CashonHand','LERemaining','LEEarned']
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        for row in output:
+            if row[0][0]<19:
+                writer.writerow({'Round':row[0][0],'Health':row[0][1],'CashonHand':row[0][2],'LERemaining':row[1],'LEEarned':row[2] })
 main()
