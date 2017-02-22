@@ -40,6 +40,9 @@ def constructLifetime(data):
 
 f= 'experimentaldata_Session1-47_2016-05-09.csv'
 formattedOutput= constructLifetime(writeCursor(f, getFieldnames(f)))
-formattedOutput.sort(key=lambda x: (x[0],x[1]))
+formattedOutput.sort(key=lambda x: (x[0],x[1],x[2]))
 for i in formattedOutput:
     print i
+print
+print
+print formattedOutput[18:27]
