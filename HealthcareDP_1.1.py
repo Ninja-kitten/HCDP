@@ -158,11 +158,11 @@ class HealthCareDP():
             alternate.append(self.Solve(i[0]))
         print alternate[0][1]
         for i in range(len(strategy[:-2])):
-            losses.append(((alternate[i+1][1]+(strategy[i][1]-strategy[i+1][1]))-alternate[i][1])/float(alternate[0][1]))
+            losses.append(((alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1]))-alternate[i][1])/float(alternate[0][1]))
         for i in range(len(alternate)-1):
-            print alternate[i], round(losses[i],4)
-        print alternate[-1]
+            print alternate[i], strategy[i+1][0], (alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1])), losses[i]
         print sum(losses)
+
 
 def round_down(num, divisor):
     return num - (num%divisor)
@@ -171,7 +171,8 @@ def round_down(num, divisor):
 #Main function for file input and initing the program
 def main():
     #print "Please enter the parameter filename. File must be in the same directory and name is case sensitive"
-    fileName = sys.argv[1]#raw_input()
+    #fileName = sys.argv[1]#
+    fileName = raw_input()
     dummyStrat = [[[1,86,0], 1696],[[2,86,0], 1604],[[3,85,0], 1472],
                   [[4,86,0], 1380],[[5,85,0], 1344],[[6,80,0], 1207],
                   [[7,79,0], 1069],[[8,78,0], 937],[[9,74,0], 892],
