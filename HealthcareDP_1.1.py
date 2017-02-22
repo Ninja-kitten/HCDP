@@ -212,8 +212,8 @@ def main():
         
     end = time.time()
     print(end - start)
-    HCDP.AnalyzeStrat(dummyStrat)
-    
+    HCDP.AnalyzeStrat([[startState,1696]]+dummyStrat)    
+
     outputfilename = 'output_{}.csv'.format(fileName[:-4])
     with open(outputfilename,'w') as f:
         fieldnames = ['Round','Health','CashonHand','LERemaining','LEEarned']
