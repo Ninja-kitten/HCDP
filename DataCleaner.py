@@ -23,7 +23,7 @@ def writeCursor(csvFile, fieldnames):
     """
     cursor = []  # Placeholder for the dictionaries/documents
     with open(csvFile) as csvFile:
-        for row in itertools.islice(csvFile, 1, 100):
+        for row in itertools.islice(csvFile, 1, 1000):
             values = list(row.strip('\n').split("\t"))
             for i, value in enumerate(values):
                 nValue = ast.literal_eval(value)
@@ -39,6 +39,7 @@ def constructLifetime(data):
     return life
 
 f= 'experimentaldata_Session1-47_2016-05-09.csv'
-o= writeCursor(f, getFieldnames(f))
-for i in constructLifetime(o):
+formattedOutput= constructLifetime(writeCursor(f, getFieldnames(f)))
+formattedOutput.sort(key=lambda x: (x[0],x[1]))
+for i in formattedOutput:
     print i
