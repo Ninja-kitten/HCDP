@@ -13,7 +13,7 @@ import collections
 import math
 import time
 import json
-import sys
+from  pprint import pprint
 
 class RegenerationStrategy():
     def __init__(self, gamma, sigma, r):
@@ -162,25 +162,41 @@ class HealthCareDP():
         for i in range(len(alternate)-1):
             print alternate[i], strategy[i+1][0], (alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1])), losses[i]
         print sum(losses)
+        print
 
 
 def round_down(num, divisor):
     return num - (num%divisor)
 
+def readInFile(data_file, size):
+    with open(data_file) as f:    
+        data = json.load(f)
+    if size == 9:
+        return [data[j:j+9] for j in xrange(0,len(data),9)]
+    else:
+        return [data[j:j+18] for j in xrange(0,len(data),18)]
+    
+def BatchRun(data, startState ,HCDP):
+    for i in data:
+        pad = [[startState,i[0][2][1]]]+ [k[2] for k in i] +[[[19,0,0],0]]
+        for j in xrange(len(pad)):
+            pad[j][1] = pad[-2][1] - pad[j][1]
+        pad = [[DPState(val[0][0],val[0][1],val[0][2]),val[1]] for val in pad]
+        HCDP.AnalyzeStrat(pad)
 
 #Main function for file input and initing the program
 def main():
     #print "Please enter the parameter filename. File must be in the same directory and name is case sensitive"
     #fileName = sys.argv[1]#
     fileName = raw_input()
-    dummyStrat = [[[1,86,0], 1696],[[2,86,0], 1604],[[3,85,0], 1472],
-                  [[4,86,0], 1380],[[5,85,0], 1344],[[6,80,0], 1207],
-                  [[7,79,0], 1069],[[8,78,0], 937],[[9,74,0], 892],
-                  [[10,68,0], 725],[[11,64,0], 573],[[12,59,0], 479],
-                  [[13,51,0], 430],[[14,44,0], 303],[[15,35,0], 252],
-                  [[16,26,0], 174],[[17,15,0], 93],[[18,3,0], 46],
-                  [[19,0,0],0]]
-    dummyStrat = [[DPState(val[0][0],val[0][1],val[0][2]),val[1]] for val in dummyStrat]
+    #dummyStrat = [[[1,86,0], 1696],[[2,86,0], 1604],[[3,85,0], 1472],
+    #              [[4,86,0], 1380],[[5,85,0], 1344],[[6,80,0], 1207],
+    #              [[7,79,0], 1069],[[8,78,0], 937],[[9,74,0], 892],
+    #              [[10,68,0], 725],[[11,64,0], 573],[[12,59,0], 479],
+    #              [[13,51,0], 430],[[14,44,0], 303],[[15,35,0], 252],
+    #              [[16,26,0], 174],[[17,15,0], 93],[[18,3,0], 46],
+    #              [[19,0,0],0]]
+    #dummyStrat = [[DPState(val[0][0],val[0][1],val[0][2]),val[1]] for val in dummyStrat]
     lines = open(fileName, "rb")
     params = []
 
@@ -203,7 +219,6 @@ def main():
     HCDP = HealthCareDP(startState,params[1],regenStrat,enjoymentStrat, degenStrat18, harvestStrat18)
           
     start = time.time()
-    
     output = []
     for val in [startState] + HCDP.FindStrat(startState):
         o = HCDP.Solve(val)
@@ -212,7 +227,8 @@ def main():
         
     end = time.time()
     print(end - start)
-    HCDP.AnalyzeStrat([[startState,1696]]+dummyStrat)    
+    
+    BatchRun(readInFile('EighteenRound_inFile.txt', 18)[:20],startState,HCDP)
 
     outputfilename = 'output_{}.csv'.format(fileName[:-4])
     with open(outputfilename,'w') as f:
