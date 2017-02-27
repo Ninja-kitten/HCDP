@@ -151,19 +151,17 @@ class HealthCareDP():
                 strategy.append(cur)
         return strategy
     
-    def AnalyzeStrat(self, strategy):
+    def AnalyzeStrat(self, strategy, outfile):
         alternate = []
         losses = []
         for i in strategy[:-1]:
             alternate.append(self.Solve(i[0]))
-        print alternate[0][1]
         for i in range(len(strategy[:-2])):
             losses.append(((alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1]))-alternate[i][1])/float(alternate[0][1]))
         for i in range(len(alternate)-1):
-            print alternate[i], strategy[i+1][0], (alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1])), losses[i]
-        print sum(losses)
-        print
-
+            with open(outfile, 'rb') as f:
+                f.write(alternate[i], strategy[i+1][0], (alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1])), losses[i])
+        f.write(sum(losses))
 
 def round_down(num, divisor):
     return num - (num%divisor)
@@ -176,27 +174,19 @@ def readInFile(data_file, size):
     else:
         return [data[j:j+18] for j in xrange(0,len(data),18)]
     
-def BatchRun(data, startState ,HCDP):
+def BatchRun(data, startState ,HCDP, outfile):
     for i in data:
         pad = [[startState,i[0][2][1]]]+ [k[2] for k in i] +[[[19,0,0],0]]
         for j in xrange(len(pad)):
             pad[j][1] = pad[-2][1] - pad[j][1]
         pad = [[DPState(val[0][0],val[0][1],val[0][2]),val[1]] for val in pad]
-        HCDP.AnalyzeStrat(pad)
+        HCDP.AnalyzeStrat(pad, outfile)
 
 #Main function for file input and initing the program
 def main():
     #print "Please enter the parameter filename. File must be in the same directory and name is case sensitive"
     #fileName = sys.argv[1]#
     fileName = raw_input()
-    #dummyStrat = [[[1,86,0], 1696],[[2,86,0], 1604],[[3,85,0], 1472],
-    #              [[4,86,0], 1380],[[5,85,0], 1344],[[6,80,0], 1207],
-    #              [[7,79,0], 1069],[[8,78,0], 937],[[9,74,0], 892],
-    #              [[10,68,0], 725],[[11,64,0], 573],[[12,59,0], 479],
-    #              [[13,51,0], 430],[[14,44,0], 303],[[15,35,0], 252],
-    #              [[16,26,0], 174],[[17,15,0], 93],[[18,3,0], 46],
-    #              [[19,0,0],0]]
-    #dummyStrat = [[DPState(val[0][0],val[0][1],val[0][2]),val[1]] for val in dummyStrat]
     lines = open(fileName, "rb")
     params = []
 
@@ -228,7 +218,7 @@ def main():
     end = time.time()
     print(end - start)
     
-    BatchRun(readInFile('EighteenRound_inFile.txt', 18)[:20],startState,HCDP)
+    BatchRun(readInFile('EighteenRound_inFile.txt', 18)[:20],startState,HCDP, 'EighteenRoundOut.txt')
 
     outputfilename = 'output_{}.csv'.format(fileName[:-4])
     with open(outputfilename,'w') as f:
