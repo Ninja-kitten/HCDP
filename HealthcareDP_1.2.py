@@ -151,7 +151,7 @@ class HealthCareDP():
                 strategy.append(cur)
         return strategy
     
-    def AnalyzeStrat(self, strategy, outfile):
+    def AnalyzeStrat(self, strategy, ID, life, outfile):
         alternate = []
         losses = []
         for i in strategy[:-1]:
@@ -162,13 +162,11 @@ class HealthCareDP():
         output = []
         for i in range(len(alternate)-1):
             output.append([alternate[i], strategy[i+1][0], (alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1])), losses[i], np.cumsum(losses[:i+1])[i]])    
-        open(outfile, 'w').close()
-        with open(outfile,'r+b') as f:
-            fieldnames = ['Optimal State','Earned Life Enjoyment','Remaining Available','% Loss','Accumulated Loss']
+        with open(outfile,'a+b') as f:
+            fieldnames = ['ID','Lifetime','Optimal State','Realized State','Remaining Available','% Loss','Accumulated Loss']
             writer = csv.DictWriter(f, fieldnames=fieldnames)
-            writer.writeheader()
             for row in output:
-               writer.writerow({'Optimal State':row[0],'Earned Life Enjoyment':row[1],'Remaining Available':row[2],'% Loss':row[3], 'Accumulated Loss':row[4]})
+               writer.writerow({'ID':ID,'Lifetime':life,'Optimal State':row[0],'Earned Life Enjoyment':row[1],'Remaining Available':row[2],'% Loss':row[3], 'Accumulated Loss':row[4]})
 
 def round_down(num, divisor):
     return num - (num%divisor)
@@ -182,12 +180,17 @@ def readInFile(data_file, size):
         return [data[j:j+18] for j in xrange(0,len(data),18)]
     
 def BatchRun(data, startState ,HCDP, outfile):
+    with open(outfile,'w') as f:
+                fieldnames = ['ID','Lifetime','Optimal State','Realized State','Remaining Available','% Loss','Accumulated Loss']
+                writer = csv.DictWriter(f, fieldnames=fieldnames)
+                writer.writeheader()
+                f.close()
     for i in data:
         pad = [[startState,i[0][2][1]]]+ [k[2] for k in i] +[[[19,0,0],0]]
         for j in xrange(len(pad)):
             pad[j][1] = pad[-2][1] - pad[j][1]
         pad = [[DPState(val[0][0],val[0][1],val[0][2]),val[1]] for val in pad]
-        HCDP.AnalyzeStrat(pad, outfile)
+        HCDP.AnalyzeStrat(pad,i[0][0], i[0][1], outfile)
 
 #Main function for file input and initing the program
 def main():
@@ -225,7 +228,7 @@ def main():
     end = time.time()
     print(end - start)
     
-    BatchRun(readInFile('EighteenRound_inFile.txt', 18)[:10],startState,HCDP, 'EighteenRoundOut.csv')
+    BatchRun(readInFile('EighteenRound_inFile.txt', 18),startState,HCDP, 'EighteenRoundOut.csv')
 
     outputfilename = 'output_{}.csv'.format(fileName[:-4])
     with open(outputfilename,'wb') as f:
