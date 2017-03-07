@@ -166,7 +166,7 @@ class HealthCareDP():
             fieldnames = ['ID','Lifetime','Optimal State','Realized State','Remaining Available','% Loss','Accumulated Loss']
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             for row in output:
-               writer.writerow({'ID':ID,'Lifetime':life,'Optimal State':row[0],'Earned Life Enjoyment':row[1],'Remaining Available':row[2],'% Loss':row[3], 'Accumulated Loss':row[4]})
+               writer.writerow({'ID':ID,'Lifetime':life,'Optimal State':row[0],'Realized State':row[1],'Remaining Available':row[2],'% Loss':'%.3f'%row[3], 'Accumulated Loss':'%.3f'%row[4]})
 
 def round_down(num, divisor):
     return num - (num%divisor)
