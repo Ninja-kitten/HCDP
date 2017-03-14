@@ -126,7 +126,7 @@ class HealthCareDP():
     def Solve(self, currentState):
         newState = self.Transition(currentState)
         if newState.period > self.numRounds or newState.health <= 0:
-            return (newState, 0)
+            return (newState, 0,0)
         elif newState in self.cache:
             return self.cache[newState]
         else: 
@@ -161,12 +161,16 @@ class HealthCareDP():
         
         output = []
         for i in range(len(alternate)-1):
-            output.append([alternate[i], strategy[i+1][0], (alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1])), losses[i], np.cumsum(losses[:i+1])[i]])    
+            output.append([alternate[i], strategy[i+1][0], (alternate[i+1][1]+(strategy[i+1][1]-strategy[i+2][1])), losses[i], np.cumsum(losses[:i+1])[i],strategy[i],(strategy[i][1]-strategy[i+1][1])])    
         with open(outfile,'a+b') as f:
-            fieldnames = ['ID','Lifetime','Optimal State','Realized State','Remaining Available','% Loss','Accumulated Loss']
+            fieldnames = ['ID','Lifetime','Period','Optimal Health','Optimal Cash on Hand', 'Remaining Max',
+                          'Optimal Earnings This Period','Realized Health','Realized Cash on Hand','Current LE',
+                          'Earned This Period','Remaining Available','% Loss','Accumulated Loss']
             writer = csv.DictWriter(f, fieldnames=fieldnames)
             for row in output:
-               writer.writerow({'ID':ID,'Lifetime':life,'Optimal State':row[0],'Realized State':row[1],'Remaining Available':row[2],'% Loss':'%.3f'%row[3], 'Accumulated Loss':'%.3f'%row[4]})
+               writer.writerow({'ID':ID,'Lifetime':life,'Period':row[0][0][0],'Optimal Health':row[0][0][1],'Optimal Cash on Hand':row[0][0][2], 'Remaining Max':int(row[0][1]),
+              'Optimal Earnings This Period':row[0][2],'Realized Health':row[5][0][1],'Realized Cash on Hand':row[5][0][2],
+              'Current LE':row[5][1],'Earned This Period':row[6],'Remaining Available':int(row[2]),'% Loss':'%.3f'%row[3],'Accumulated Loss':'%.3f'%row[4]})
 
 def round_down(num, divisor):
     return num - (num%divisor)
@@ -181,14 +185,18 @@ def readInFile(data_file, size):
     
 def BatchRun(data, startState ,HCDP, outfile):
     with open(outfile,'w') as f:
-                fieldnames = ['ID','Lifetime','Optimal State','Realized State','Remaining Available','% Loss','Accumulated Loss']
-                writer = csv.DictWriter(f, fieldnames=fieldnames)
-                writer.writeheader()
-                f.close()
+        fieldnames = ['ID','Lifetime','Period','Optimal Health','Optimal Cash on Hand', 'Remaining Max',
+                      'Optimal Earnings This Period','Realized Health','Realized Cash on Hand','Current LE',
+                      'Earned This Period','Remaining Available','% Loss','Accumulated Loss']
+        writer = csv.DictWriter(f, fieldnames=fieldnames)
+        writer.writeheader()
+        f.close()
     for i in data:
-        pad = [[startState,i[0][2][1]]]+ [k[2] for k in i] +[[[19,0,0],0]]
+        total = i[-1][2][1]
+        pad = [k[2] for k in i]+[[[19,0,0],0]]
         for j in xrange(len(pad)):
-            pad[j][1] = pad[-2][1] - pad[j][1]
+            pad[j][1] = max(pad[-2][1] - pad[j][1],0)
+        pad = [[startState,total]]+pad
         pad = [[DPState(val[0][0],val[0][1],val[0][2]),val[1]] for val in pad]
         HCDP.AnalyzeStrat(pad,i[0][0], i[0][1], outfile)
 
@@ -212,7 +220,7 @@ def main():
     enjoymentStrat=LifeEnjoymentStrategy(params[5],params[6],params[7],params[8])
     degenStrat18 = DegenerationStrategy(7.625, 0.25)
     degenStrat9 = DegenerationStrategy(15,1)
-    harvestStrat18 = HarvestStrategy(46.811)
+    harvestStrat18 = HarvestStrategy(46.811*.87/.93622)
     harvestStrat9 = HarvestStrategy(93.622)
     startState = params[0] = DPState(params[0][0], params[0][1], params[0][2])
 
@@ -228,7 +236,7 @@ def main():
     end = time.time()
     print(end - start)
     
-    BatchRun(readInFile('EighteenRound_inFile.txt', 18),startState,HCDP, 'EighteenRoundOut.csv')
+    BatchRun(readInFile('EighteenRound_inFile.txt', 18)[:20],startState,HCDP, 'EighteenRoundOut.csv')
 
     outputfilename = 'output_{}.csv'.format(fileName[:-4])
     with open(outputfilename,'wb') as f:
