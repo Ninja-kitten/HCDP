@@ -13,48 +13,47 @@ import math
 import time
 import json
 import numpy as np
-from  pprint import pprint
 
 class RegenerationStrategy():
-    def __init__(self, gamma, sigma, r):
-        self.gamma = gamma
-        self.sigma = sigma
-        self.r = r
+    def __init__(self,k, d):
+        self.k = k
+        self.d = d
 
-    def HealthRegained(self, investment):
-        regain = int(self.gamma*((1 - math.exp((-1)*self.sigma*investment))/
-                                 (1 + math.exp(((-1)*self.sigma*(investment - self.r))))))
+    def HealthRegained(self, investment, health):
+        regain = int((100-health)*((investment-self.d*(1-(health/100)))/(investment+self.k)))
         return regain
 
 class LifeEnjoymentStrategy():
-    def __init__(self, alpha, beta, mu, c):
+    def __init__(self, alpha, beta, mu, c, j, degen):
         self.alpha = alpha
         self.beta = beta
         self.mu = mu
         self.c = c
+        self.j = j
+        self.degen = degen
 
     def LifeEnjoyment(self, investment, currentHealth):
-        enjoy = self.c*(self.beta*(currentHealth/100.0) + self.mu)*(1 - math.exp((-1)*self.alpha*investment))
+        #enjoy = self.c*(self.beta*(currentHealth/100.0) + self.mu)*(1 - math.exp((-1)*self.alpha*investment))
+        enjoy = currentHealth*(investment/(investment+self.j))
         return enjoy
 
 class DegenerationStrategy():
-    def __init__(self, intercept, slope, horizon):
-        self.intercept = intercept
-        self.slope = slope
-        self.horizon = horizon
+    def __init__(self, degen):
+        self.degen = degen
 
     def HealthDegeneration(self, currentHealth, currentRound):
-        if currentRound<=self.horizon:
-            return max(currentHealth - int(round(self.intercept + (self.slope*currentRound))),0)
+        if currentRound == 90: #or currentRound == 6 or currentRound == 9:    
+            return max(currentHealth - (self.degen+20),0)
         else:
-            return max(currentHealth - int(round(self.intercept + (2*self.slope*currentRound))),0)
+            return max(currentHealth - self.degen,0)
 
 class HarvestStrategy():
     def __init__(self, maxHarvest):
         self.maxHarvest = maxHarvest
 
-    def HarvestAmount(self, currentHealth):
-        return int(round(self.maxHarvest*currentHealth/100))
+    def HarvestAmount(self, currentHealth, currentRound):
+            return int(round(self.maxHarvest))
+        #*currentHealth/100
 
 DPState = collections.namedtuple('DPState', 'period, health, cash')
 Investment = collections.namedtuple('Investment', 'healthExpenditure, lifeExpenditure, cashRemaining')
@@ -88,12 +87,12 @@ class HealthCareDP():
     def Transition(self, state):
         nextPeriod = state.period + 1
         return DPState(nextPeriod,
-                       self.degenStrat.HealthDegeneration(state.health, nextPeriod),
-                       state.cash + self.harvestStrat.HarvestAmount(state.health))
+                           self.degenStrat.HealthDegeneration(state.health, nextPeriod),
+                           state.cash + self.harvestStrat.HarvestAmount(state.health, nextPeriod))            
     
     #Investment function. Simulates the investment phase for state X'
     def Invest(self, state, investment):
-        endHealth = min(100, state.health + self.regenStrat.HealthRegained(investment.healthExpenditure))
+        endHealth = min(100, state.health + self.regenStrat.HealthRegained(investment.healthExpenditure, state.health))
         return (DPState(state.period,
                         endHealth,
                         investment[2]),
@@ -103,7 +102,7 @@ class HealthCareDP():
     #StateEnum takes in every potential division of the available cash and calls Invest to generate every potential state
     #that can be achieved from the current state.
     def StateEnum(self, state):
-        investments = self.InvestmentEnum(state.cash)
+        investments = self.InvestmentEnum(state.cash, state.health)
         allStateEnjoyments = []
         for investment in investments:
             newStateEnjoyment = self.Invest(state, investment)
@@ -112,16 +111,18 @@ class HealthCareDP():
         return allStateEnjoyments
         
     #InvestmentEnum generates every potential division of the available cash for StateEnum use.
-    def InvestmentEnum(self, cash):
+    def InvestmentEnum(self, cash, health):
         potentialStates = []
         prev =-1
         if str(cash) not in self.EnumCache:
             for healthExpenditure in range(cash+1):
-                hr = self.regenStrat.HealthRegained(healthExpenditure)
+                hr = self.regenStrat.HealthRegained(healthExpenditure, health)
                 if not hr == prev:
                     prev = hr
-                    for lifeExpenditure in range(max(cash-healthExpenditure-20, 0), cash+1-healthExpenditure):
-                        potentialStates.append(Investment(healthExpenditure, lifeExpenditure, cash-healthExpenditure-lifeExpenditure))
+#                    for lifeExpenditure in range(max(cash-healthExpenditure-20, 0), cash+1-healthExpenditure):
+#                        potentialStates.append(Investment(healthExpenditure, lifeExpenditure, cash-healthExpenditure-lifeExpenditure))
+                    for bankedCash in range(0, min(1, cash-healthExpenditure+1), 1):
+                        potentialStates.append(Investment(healthExpenditure,cash-healthExpenditure-bankedCash, bankedCash))
             self.EnumCache[str(cash)] = potentialStates
         return self.EnumCache[str(cash)]
     
@@ -220,15 +221,20 @@ def main():
         except:
             params[i] = json.loads(params[i][0])
 
-    regenStrat = RegenerationStrategy(params[2],params[3],params[4])
-    enjoymentStrat=LifeEnjoymentStrategy(params[5],params[6],params[7],params[8])
-    degenStrat18 = DegenerationStrategy(7.625, 0.25, 18)
-    degenStrat9 = DegenerationStrategy(15,1,9)
+    k = 200
+    j = 100.0
+    d = 0
+    degen = 10
+    regenStrat = RegenerationStrategy(k, d)
+    degenStrat18 = DegenerationStrategy(degen/2.0)
+    degenStrat9 = DegenerationStrategy(degen)
     harvestStrat18 = HarvestStrategy(46.811/.93622)
-    harvestStrat9 = HarvestStrategy(93.622)
+    harvestStrat9 = HarvestStrategy(100)
+    enjoymentStrat=LifeEnjoymentStrategy(params[5],params[6],params[7],params[8], j, degen)
     startState = params[0] = DPState(params[0][0], params[0][1], params[0][2])
 
-    HCDP = HealthCareDP(startState,params[1],regenStrat,enjoymentStrat, degenStrat18, harvestStrat18  )
+    HCDP = HealthCareDP(startState,params[1],regenStrat,enjoymentStrat, degenStrat9, harvestStrat9  )
+    
           
     start = time.time()
     output = []
@@ -236,17 +242,24 @@ def main():
         o = HCDP.Solve(val)
         output.append(o)
         print(o)
-        
     end = time.time()
     print(end - start)
     
+    #lookupList = {}
+    #for i in range(1,101):
+    #    startState = DPState(0,i,0)
+    #    o = HCDP.Solve(startState)
+    #    lookupList[str(i)]=int(o[1])
+    #print(lookupList)
+    
+#    outputfilename = 'output_{}.csv'.format('LookupTable')
+#    with open(outputfilename,'w+',newline='') as f:
+#        fieldnames = ['Health','DP Computed Value']
+#        writer = csv.DictWriter(f, fieldnames=fieldnames)
+#        writer.writeheader()
+#        for i in range(1,101):
+#            writer.writerow({'Health': i,'DP Computed Value': lookupList[str(i)]})
+                
     #BatchRun(readInFile('EighteenRound_inFile.txt', 18)[:20],startState,HCDP, 'EighteenRoundOut.csv')
 
-    outputfilename = 'output_{}.csv'.format(fileName[:-4])
-    with open(outputfilename,'w+',newline='') as f:
-        fieldnames = ['Round','Health','CashonHand','LERemaining','LEEarned']
-        writer = csv.DictWriter(f, fieldnames=fieldnames)
-        writer.writeheader()
-        for row in output:
-            writer.writerow({'Round':row[0][0],'Health':row[0][1],'CashonHand':row[0][2],'LERemaining':int(row[1]),'LEEarned':int(row[2]) })
 main()
