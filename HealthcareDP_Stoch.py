@@ -219,7 +219,6 @@ def main():
     output = []
     for val in [startState] + HCDP.FindStrat(startState):
         o = HCDP.Solve(val)
-        print(o)
         output.append(o)
         print(o)
         
