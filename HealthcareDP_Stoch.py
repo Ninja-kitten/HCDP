@@ -100,7 +100,7 @@ class HealthCareDP():
             newState = self.Transition(currentState)
             hitState = DPState(newState[0],max(newState[1]-self.stochHitSize,0),newState[2])
         if newState.period > self.numRounds or newState.health <= 0:
-            return (newState, 0,0)
+            return ((newState, 0,0),(newState, 0,0),0) #needs to be this format to prevent error when the player dies
         elif newState in self.cache:
             return self.cache[newState]
         else: 
