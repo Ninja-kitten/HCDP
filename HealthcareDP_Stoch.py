@@ -134,7 +134,7 @@ class HealthCareDP():
                 cur = self.Solve(cur[0][0])
             except:
                 cur = self.Solve(cur)
-            strategy.append(cur)
+            strategy.append(cur[0][0])
         return strategy
     
     def AnalyzeStrat(self, strategy, ID, life, outfile):
